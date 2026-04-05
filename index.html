@@ -613,6 +613,41 @@
     .font-btn.active {
       border-color: var(--bg-btn-op);
     }
+
+    /* 폭죽 캔버스 — 전체 화면, 클릭 통과 */
+    #fireworksCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* 축하 메시지 */
+    #celebrationMsg {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: var(--bg-btn-op);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 700;
+      padding: 16px 32px;
+      border-radius: 50px;
+      z-index: 10000;
+      pointer-events: none;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s;
+      opacity: 0;
+      white-space: nowrap;
+    }
+
+    #celebrationMsg.show {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
@@ -710,6 +745,10 @@
       <div id="fontGrid"></div>
     </div>
   </div>
+
+  <!-- 폭죽 캔버스 -->
+  <canvas id="fireworksCanvas"></canvas>
+  <div id="celebrationMsg">🎉 5번 달성! 축하해요!</div>
 
   <script>
     // ===== 인증 & 사용자 관리 =====
@@ -1241,6 +1280,8 @@
       const resStr = parseFloat(res.toPrecision(12)).toString();
       if (!silent) {
         addHistory(exprText, resStr);
+        calcCount++;
+        if (calcCount % 5 === 0) launchFireworks();
       }
       current = resStr;
       operator = null;
@@ -1319,6 +1360,87 @@
 
     // 계산기 버튼 영역 클릭 시 효과음 재생 (이벤트 위임)
     document.querySelector('.buttons').addEventListener('mousedown', playClickSound);
+
+    // ===== 폭죽 이펙트 =====
+    let calcCount = 0;
+
+    const fwCanvas = document.getElementById('fireworksCanvas');
+    const fwCtx = fwCanvas.getContext('2d');
+    let fwParticles = [];
+    let fwAnimId = null;
+
+    function resizeFwCanvas() {
+      fwCanvas.width = window.innerWidth;
+      fwCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeFwCanvas);
+    resizeFwCanvas();
+
+    // 파티클 생성 (한 발)
+    function createParticles(x, y) {
+      const colors = ['#FF9F0A', '#FF375F', '#30D158', '#0A84FF', '#BF5AF2', '#FFD60A', '#FF6B35', '#ffffff'];
+      for (let i = 0; i < 90; i++) {
+        const angle = (Math.PI * 2 / 90) * i + Math.random() * 0.3;
+        const speed = 3 + Math.random() * 6;
+        fwParticles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 2,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          life: 1.0,
+          size: 3 + Math.random() * 3,
+        });
+      }
+    }
+
+    // 파티클 애니메이션 루프
+    function animateFw() {
+      fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+      fwParticles = fwParticles.filter(p => p.life > 0.02);
+      fwParticles.forEach(p => {
+        p.x  += p.vx;
+        p.y  += p.vy;
+        p.vy += 0.15; // 중력
+        p.vx *= 0.96;
+        p.vy *= 0.96;
+        p.life -= 0.016;
+        fwCtx.globalAlpha = p.life;
+        fwCtx.beginPath();
+        fwCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        fwCtx.fillStyle = p.color;
+        fwCtx.fill();
+      });
+      fwCtx.globalAlpha = 1;
+      if (fwParticles.length > 0) {
+        fwAnimId = requestAnimationFrame(animateFw);
+      } else {
+        fwAnimId = null;
+      }
+    }
+
+    // 폭죽 발사 (5발 순차 발사)
+    function launchFireworks() {
+      const w = fwCanvas.width;
+      const h = fwCanvas.height;
+      const spots = [
+        [w * 0.2,  h * 0.3],
+        [w * 0.8,  h * 0.3],
+        [w * 0.5,  h * 0.2],
+        [w * 0.3,  h * 0.5],
+        [w * 0.7,  h * 0.45],
+      ];
+      spots.forEach(([x, y], i) => {
+        setTimeout(() => {
+          createParticles(x, y);
+          if (!fwAnimId) fwAnimId = requestAnimationFrame(animateFw);
+        }, i * 220);
+      });
+
+      // 축하 메시지 표시 후 자동 숨김
+      const msg = document.getElementById('celebrationMsg');
+      msg.classList.add('show');
+      setTimeout(() => { msg.classList.remove('show'); }, 2200);
+    }
 
     // 앱 시작
     init();
