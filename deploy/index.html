@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>계산기</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* 라이트/다크 색상 변수 */
+    :root {
+      --bg-page: #f0f2f5;
+      --bg-card: #ffffff;
+      --bg-display: #f8f9fa;
+      --bg-btn-num: #f8f9fa;
+      --bg-btn-num-hover: #e9ecef;
+      --bg-btn-util: #f1f3f5;
+      --bg-btn-util-hover: #e9ecef;
+      --bg-btn-op: #FF9F0A;
+      --bg-btn-op-hover: #E8890A;
+      --bg-btn-op-active: #ffffff;
+      --bg-btn-eq: #FF9F0A;
+      --bg-btn-eq-hover: #E8890A;
+      --bg-history-item: #f8f9fa;
+      --bg-history-item-hover: #e8f4fd;
+      --bg-history-newest: #e8f4fd;
+      --color-text: #212529;
+      --color-text-sub: #adb5bd;
+      --color-text-util: #495057;
+      --color-op: #ffffff;
+      --color-eq: #ffffff;
+      --color-history-title: #868e96;
+      --shadow: rgba(0, 0, 0, 0.12);
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: var(--bg-page);
+      font-family: 'Segoe UI', sans-serif;
+      transition: background 0.3s;
+    }
+
+    /* 설정 버튼 (우상단 고정) */
+    .settings-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--bg-card);
+      border: none;
+      border-radius: 50px;
+      padding: 8px 14px;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--color-text);
+      box-shadow: 0 4px 12px var(--shadow);
+      transition: background 0.2s, transform 0.15s;
+      line-height: 1;
+    }
+
+    .settings-btn:active {
+      filter: none;
+      transform: scale(0.92);
+    }
+
+    .calculator {
+      background: var(--bg-card);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px var(--shadow);
+      padding: 28px;
+      width: 320px;
+      transition: background 0.3s;
+    }
+
+    /* 히스토리 패널 */
+    .history-panel {
+      background: var(--bg-card);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px var(--shadow);
+      padding: 24px;
+      width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: background 0.3s;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .history-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-history-title);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .history-clear {
+      font-size: 12px;
+      color: var(--color-text-sub);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .history-clear:hover {
+      background: var(--bg-btn-util);
+      color: var(--color-text-util);
+    }
+
+    .history-clear:active {
+      transform: none;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .history-empty {
+      font-size: 13px;
+      color: var(--color-text-sub);
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .history-item {
+      background: var(--bg-history-item);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: 2px solid transparent;
+    }
+
+    .history-item:hover {
+      background: var(--bg-history-item-hover);
+      border-color: #d0ebff;
+    }
+
+    .history-item:active {
+      transform: scale(0.97);
+    }
+
+    .history-item .h-expr {
+      font-size: 11px;
+      color: var(--color-text-sub);
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item .h-result {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .history-item.newest {
+      border-color: #74c0fc;
+      background: var(--bg-history-newest);
+    }
+
+    .display {
+      background: var(--bg-display);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      text-align: right;
+      min-height: 96px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 6px;
+      transition: background 0.3s;
+    }
+
+    .display .expression {
+      font-size: 14px;
+      color: var(--color-text-sub);
+      min-height: 20px;
+      word-break: break-all;
+    }
+
+    .display .result {
+      font-size: 36px;
+      font-weight: 300;
+      color: var(--color-text);
+      word-break: break-all;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 18px 0;
+      transition: filter 0.08s ease, transform 0.08s ease;
+      outline: none;
+    }
+
+    button:active {
+      filter: brightness(0.72);
+      transform: scale(0.96);
+    }
+
+    /* 숫자 버튼 */
+    .btn-num {
+      background: var(--bg-btn-num);
+      color: var(--color-text);
+    }
+
+    .btn-num:hover {
+      background: var(--bg-btn-num-hover);
+    }
+
+    /* 연산자 버튼 */
+    .btn-op {
+      background: var(--bg-btn-op);
+      color: var(--color-op);
+    }
+
+    .btn-op:hover {
+      background: var(--bg-btn-op-hover);
+    }
+
+    .btn-op.active {
+      background: var(--bg-btn-op-active);
+      color: #FF9F0A;
+    }
+
+    /* 등호 버튼 */
+    .btn-eq {
+      background: var(--bg-btn-eq);
+      color: var(--color-eq);
+      grid-column: span 2;
+    }
+
+    .btn-eq:hover {
+      background: var(--bg-btn-eq-hover);
+    }
+
+    /* AC / +/- / % 버튼 */
+    .btn-util {
+      background: var(--bg-btn-util);
+      color: var(--color-text-util);
+    }
+
+    .btn-util:hover {
+      background: var(--bg-btn-util-hover);
+    }
+
+    /* 0 버튼 */
+    .btn-zero {
+      grid-column: span 2;
+      text-align: left;
+      padding-left: 26px;
+    }
+
+    /* ===== 인증 오버레이 ===== */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .auth-card {
+      background: var(--bg-card);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px var(--shadow);
+      padding: 36px 32px;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .auth-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--color-text);
+      text-align: center;
+    }
+
+    .auth-tabs {
+      display: flex;
+      background: var(--bg-btn-util);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 9px;
+      padding: 10px 0;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-sub);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .auth-tab.active {
+      background: var(--bg-card);
+      color: var(--color-text);
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .auth-tab:active {
+      transform: none;
+    }
+
+    .auth-input {
+      background: var(--bg-display);
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 15px;
+      color: var(--color-text);
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .auth-input:focus {
+      border-color: #1971c2;
+    }
+
+    .auth-btn {
+      background: var(--bg-btn-eq);
+      color: var(--color-eq);
+      border: none;
+      border-radius: 14px;
+      padding: 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .auth-btn:hover {
+      background: var(--bg-btn-eq-hover);
+    }
+
+    .auth-error {
+      font-size: 13px;
+      color: #e03131;
+      text-align: center;
+      min-height: 18px;
+    }
+
+    /* ===== 사용자 정보 바 ===== */
+    .user-bar {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-card);
+      border-radius: 50px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 12px var(--shadow);
+      font-size: 14px;
+      color: var(--color-text);
+      white-space: nowrap;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .user-bar-name {
+      font-weight: 500;
+    }
+
+    .user-bar-logout {
+      background: none;
+      border: none;
+      color: var(--color-text-sub);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .user-bar-logout:hover {
+      background: var(--bg-btn-util);
+      color: var(--color-text-util);
+    }
+
+    .user-bar-logout:active {
+      transform: none;
+    }
+
+    /* ===== 설정 패널 ===== */
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 200;
+      display: none;
+    }
+
+    .settings-overlay.open {
+      display: block;
+    }
+
+    .settings-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      height: 100vh;
+      width: 280px;
+      background: var(--bg-card);
+      box-shadow: -4px 0 24px var(--shadow);
+      z-index: 201;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .settings-panel.open {
+      transform: translateX(0);
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 20px 16px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text);
+      border-bottom: 1px solid var(--bg-btn-util);
+      flex-shrink: 0;
+    }
+
+    .settings-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--color-text-sub);
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 8px;
+      line-height: 1;
+      transition: background 0.15s;
+    }
+
+    .settings-close:hover {
+      background: var(--bg-btn-util);
+    }
+
+    .settings-close:active {
+      filter: none;
+      transform: none;
+    }
+
+    .settings-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-history-title);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 18px 20px 10px;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 0 16px;
+    }
+
+    .preset-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 4px;
+      border-radius: 14px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
+      background: none;
+    }
+
+    .preset-card:hover {
+      background: var(--bg-btn-util);
+    }
+
+    .preset-card.active {
+      border-color: var(--bg-btn-op);
+      background: var(--bg-btn-util);
+    }
+
+    .preset-card:active {
+      filter: none;
+      transform: scale(0.95);
+    }
+
+    .preset-preview {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px var(--shadow);
+      flex-shrink: 0;
+    }
+
+    .preset-name {
+      font-size: 10px;
+      color: var(--color-text);
+      text-align: center;
+      font-weight: 500;
+      line-height: 1.3;
+      word-break: keep-all;
+    }
+
+    .color-section {
+      padding: 0 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-display);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+
+    .color-row span {
+      font-size: 14px;
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    .color-row input[type="color"] {
+      width: 44px;
+      height: 32px;
+      border: 2px solid var(--bg-btn-util);
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 2px;
+      background: transparent;
+    }
+
+    /* 글꼴 선택 섹션 */
+    .font-section {
+      padding: 0 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .font-btn {
+      background: var(--bg-display);
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      color: var(--color-text);
+      font-size: 14px;
+      font-weight: 500;
+      text-align: left;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .font-btn:hover {
+      background: var(--bg-btn-num-hover);
+    }
+
+    .font-btn.active {
+      border-color: var(--bg-btn-op);
+    }
+  </style>
+</head>
+<body>
+  <!-- 로그인/회원가입 오버레이 -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-title">🔢 계산기</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">로그인</button>
+        <button class="auth-tab" id="tabRegister" onclick="switchTab('register')">회원가입</button>
+      </div>
+      <input class="auth-input" id="authUsername" type="text" placeholder="아이디" autocomplete="username" />
+      <input class="auth-input" id="authPassword" type="password" placeholder="비밀번호" autocomplete="current-password" />
+      <button class="auth-btn" id="authSubmitBtn" onclick="submitAuth()">로그인</button>
+      <p class="auth-error" id="authError"></p>
+    </div>
+  </div>
+
+  <!-- 사용자 정보 바 -->
+  <div class="user-bar" id="userBar" style="display:none">
+    <span class="user-bar-name" id="userGreeting"></span>
+    <button class="user-bar-logout" onclick="logout()">로그아웃</button>
+  </div>
+
+  <!-- 설정 버튼 -->
+  <button class="settings-btn" onclick="openSettings()">⚙️</button>
+
+  <!-- 히스토리 패널 -->
+  <div class="history-panel">
+    <div class="history-header">
+      <h2>히스토리</h2>
+      <button class="history-clear" onclick="clearHistory()">지우기</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty" id="historyEmpty">아직 계산 내역이 없어요</div>
+    </div>
+  </div>
+
+  <div class="calculator">
+    <div class="display">
+      <div class="expression" id="expression"></div>
+      <div class="result" id="result">0</div>
+    </div>
+    <div class="buttons">
+      <button class="btn-util" onclick="clearAll()">AC</button>
+      <button class="btn-util" onclick="toggleSign()">+/-</button>
+      <button class="btn-util" onclick="percent()">%</button>
+      <button class="btn-op" id="op-/" onclick="setOperator('/')">÷</button>
+
+      <button class="btn-num" onclick="inputNum('7')">7</button>
+      <button class="btn-num" onclick="inputNum('8')">8</button>
+      <button class="btn-num" onclick="inputNum('9')">9</button>
+      <button class="btn-op" id="op-*" onclick="setOperator('*')">×</button>
+
+      <button class="btn-num" onclick="inputNum('4')">4</button>
+      <button class="btn-num" onclick="inputNum('5')">5</button>
+      <button class="btn-num" onclick="inputNum('6')">6</button>
+      <button class="btn-op" id="op--" onclick="setOperator('-')">−</button>
+
+      <button class="btn-num" onclick="inputNum('1')">1</button>
+      <button class="btn-num" onclick="inputNum('2')">2</button>
+      <button class="btn-num" onclick="inputNum('3')">3</button>
+      <button class="btn-op" id="op-+" onclick="setOperator('+')">+</button>
+
+      <button class="btn-num btn-zero" onclick="inputNum('0')">0</button>
+      <button class="btn-num" onclick="inputDot()">.</button>
+      <button class="btn-eq" onclick="calculate()">=</button>
+    </div>
+  </div>
+
+  <!-- 설정 패널 오버레이 (외부 클릭 닫기) -->
+  <div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()"></div>
+
+  <!-- 설정 패널 -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-header">
+      <span>테마 설정</span>
+      <button class="settings-close" onclick="closeSettings()">×</button>
+    </div>
+    <p class="settings-label">프리셋</p>
+    <div class="preset-grid" id="presetGrid"></div>
+    <p class="settings-label">커스텀 색상</p>
+    <div class="color-section">
+      <div class="color-row">
+        <span>배경색</span>
+        <input type="color" id="colorBg" oninput="applyCustomColors(this.value, null)">
+      </div>
+      <div class="color-row">
+        <span>어센트색</span>
+        <input type="color" id="colorAccent" oninput="applyCustomColors(null, this.value)">
+      </div>
+    </div>
+    <p class="settings-label">글꼴</p>
+    <div class="font-section">
+      <div id="fontGrid"></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 인증 & 사용자 관리 =====
+
+    let currentUser = null; // 현재 로그인한 사용자 {id, username}
+    let authMode = 'login'; // 현재 탭 ('login' | 'register')
+
+    // SHA-256 해시 (비밀번호 저장 시 사용)
+    async function hashPassword(pw) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // localStorage 헬퍼
+    function getUsers() { return JSON.parse(localStorage.getItem('calc_users') || '[]'); }
+    function saveUsers(u) { localStorage.setItem('calc_users', JSON.stringify(u)); }
+    function getHistories() { return JSON.parse(localStorage.getItem('calc_histories') || '{}'); }
+    function saveHistories(h) { localStorage.setItem('calc_histories', JSON.stringify(h)); }
+    function getThemes() { return JSON.parse(localStorage.getItem('calc_themes') || '{}'); }
+    function saveThemes(t) { localStorage.setItem('calc_themes', JSON.stringify(t)); }
+
+    // 인증 오버레이 표시/숨김
+    function showAuth() { document.getElementById('authOverlay').style.display = 'flex'; }
+    function hideAuth() { document.getElementById('authOverlay').style.display = 'none'; }
+
+    // 탭 전환 (로그인 ↔ 회원가입)
+    function switchTab(tab) {
+      authMode = tab;
+      document.getElementById('authError').textContent = '';
+      document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+      document.getElementById('authSubmitBtn').textContent = tab === 'login' ? '로그인' : '회원가입';
+    }
+
+    // 로그인/회원가입 제출
+    async function submitAuth() {
+      const username = document.getElementById('authUsername').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const errorEl = document.getElementById('authError');
+      errorEl.textContent = '';
+
+      if (!username || !password) {
+        errorEl.textContent = '아이디와 비밀번호를 입력해주세요.';
+        return;
+      }
+      if (password.length < 4) {
+        errorEl.textContent = '비밀번호는 4자 이상이어야 합니다.';
+        return;
+      }
+
+      const pwHash = await hashPassword(password);
+
+      if (authMode === 'register') {
+        const users = getUsers();
+        if (users.find(u => u.username === username)) {
+          errorEl.textContent = '이미 사용 중인 아이디입니다.';
+          return;
+        }
+        const id = Date.now().toString();
+        users.push({ id, username, pwHash });
+        saveUsers(users);
+        loginSuccess({ id, username });
+      } else {
+        const users = getUsers();
+        const user = users.find(u => u.username === username && u.pwHash === pwHash);
+        if (!user) {
+          errorEl.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
+          return;
+        }
+        loginSuccess({ id: user.id, username: user.username });
+      }
+    }
+
+    // 로그인 성공 처리
+    function loginSuccess(user) {
+      currentUser = user;
+      localStorage.setItem('calc_currentUser', JSON.stringify(user));
+      hideAuth();
+      document.getElementById('userGreeting').textContent = `👤 ${user.username}님 환영합니다`;
+      document.getElementById('userBar').style.display = 'flex';
+      loadUserData(user.id);
+      document.getElementById('authUsername').value = '';
+      document.getElementById('authPassword').value = '';
+    }
+
+    // 로그아웃
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem('calc_currentUser');
+      document.getElementById('userBar').style.display = 'none';
+      // 계산기 상태 초기화
+      calcHistory = [];
+      renderHistory();
+      clearAll();
+      // 테마·글꼴 초기화
+      applyTheme('light', null, null);
+      applyFont('default');
+      showAuth();
+    }
+
+    // 사용자 데이터 복원 (로그인 시)
+    function loadUserData(userId) {
+      // 히스토리 복원
+      const histories = getHistories();
+      calcHistory = histories[userId] || [];
+      renderHistory();
+      // 테마 복원 (하위 호환: 기존 문자열 형식 처리)
+      const themes = getThemes();
+      let td = themes[userId];
+      if (typeof td === 'string') td = { preset: td, customBg: null, customAccent: null };
+      if (!td) td = { preset: 'light', customBg: null, customAccent: null };
+      applyTheme(td.preset, td.customBg, td.customAccent);
+      applyFont(td.font || 'default');
+    }
+
+    // 현재 히스토리를 localStorage에 저장
+    function saveHistory() {
+      if (!currentUser) return;
+      const histories = getHistories();
+      histories[currentUser.id] = calcHistory;
+      saveHistories(histories);
+    }
+
+    // 현재 테마를 localStorage에 저장
+    function saveTheme(preset, customBg, customAccent) {
+      if (!currentUser) return;
+      const themes = getThemes();
+      themes[currentUser.id] = { preset, customBg: customBg || null, customAccent: customAccent || null };
+      saveThemes(themes);
+    }
+
+    // 앱 초기화 — 이전 로그인 세션 복원
+    function init() {
+      const saved = localStorage.getItem('calc_currentUser');
+      if (saved) {
+        try {
+          loginSuccess(JSON.parse(saved));
+        } catch {
+          showAuth();
+        }
+      } else {
+        showAuth();
+      }
+    }
+
+    // 오버레이가 열려있을 때 Enter 키로 제출
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && document.getElementById('authOverlay').style.display !== 'none') {
+        e.preventDefault();
+        submitAuth();
+      }
+    });
+
+
+    // ===== 테마 시스템 =====
+
+    const PRESETS = {
+      light: {
+        name: '라이트', icon: '☀️',
+        '--bg-page': '#f0f2f5', '--bg-card': '#ffffff', '--bg-display': '#f8f9fa',
+        '--bg-btn-num': '#f8f9fa', '--bg-btn-num-hover': '#e9ecef',
+        '--bg-btn-util': '#f1f3f5', '--bg-btn-util-hover': '#e9ecef',
+        '--bg-btn-op': '#FF9F0A', '--bg-btn-op-hover': '#E8890A', '--bg-btn-op-active': '#ffffff',
+        '--bg-btn-eq': '#FF9F0A', '--bg-btn-eq-hover': '#E8890A',
+        '--bg-history-item': '#f8f9fa', '--bg-history-item-hover': '#e8f4fd', '--bg-history-newest': '#e8f4fd',
+        '--color-text': '#212529', '--color-text-sub': '#adb5bd', '--color-text-util': '#495057',
+        '--color-op': '#ffffff', '--color-eq': '#ffffff', '--color-history-title': '#868e96',
+        '--shadow': 'rgba(0,0,0,0.12)',
+      },
+      dark: {
+        name: '다크', icon: '🌙',
+        '--bg-page': '#1a1a2e', '--bg-card': '#16213e', '--bg-display': '#0f3460',
+        '--bg-btn-num': '#1e2a45', '--bg-btn-num-hover': '#263552',
+        '--bg-btn-util': '#1e2a45', '--bg-btn-util-hover': '#263552',
+        '--bg-btn-op': '#FF9F0A', '--bg-btn-op-hover': '#E8890A', '--bg-btn-op-active': '#ffffff',
+        '--bg-btn-eq': '#FF9F0A', '--bg-btn-eq-hover': '#E8890A',
+        '--bg-history-item': '#1e2a45', '--bg-history-item-hover': '#1a3a5c', '--bg-history-newest': '#1a3a5c',
+        '--color-text': '#e9ecef', '--color-text-sub': '#6c8aad', '--color-text-util': '#adb5bd',
+        '--color-op': '#ffffff', '--color-eq': '#ffffff', '--color-history-title': '#6c8aad',
+        '--shadow': 'rgba(0,0,0,0.4)',
+      },
+      cherry: {
+        name: '체리블라썸', icon: '🌸',
+        '--bg-page': '#fff0f6', '--bg-card': '#ffffff', '--bg-display': '#fce4ec',
+        '--bg-btn-num': '#fce4ec', '--bg-btn-num-hover': '#f8bbd0',
+        '--bg-btn-util': '#f8bbd0', '--bg-btn-util-hover': '#f48fb1',
+        '--bg-btn-op': '#e91e63', '--bg-btn-op-hover': '#c2185b', '--bg-btn-op-active': '#ffffff',
+        '--bg-btn-eq': '#e91e63', '--bg-btn-eq-hover': '#c2185b',
+        '--bg-history-item': '#fce4ec', '--bg-history-item-hover': '#f8bbd0', '--bg-history-newest': '#f8bbd0',
+        '--color-text': '#3d0026', '--color-text-sub': '#c2185b', '--color-text-util': '#880e4f',
+        '--color-op': '#ffffff', '--color-eq': '#ffffff', '--color-history-title': '#c2185b',
+        '--shadow': 'rgba(233,30,99,0.15)',
+      },
+      ocean: {
+        name: '오션', icon: '🌊',
+        '--bg-page': '#e0f7fa', '--bg-card': '#ffffff', '--bg-display': '#b2ebf2',
+        '--bg-btn-num': '#b2ebf2', '--bg-btn-num-hover': '#80deea',
+        '--bg-btn-util': '#80deea', '--bg-btn-util-hover': '#4dd0e1',
+        '--bg-btn-op': '#0077b6', '--bg-btn-op-hover': '#005f91', '--bg-btn-op-active': '#ffffff',
+        '--bg-btn-eq': '#0077b6', '--bg-btn-eq-hover': '#005f91',
+        '--bg-history-item': '#b2ebf2', '--bg-history-item-hover': '#80deea', '--bg-history-newest': '#80deea',
+        '--color-text': '#003049', '--color-text-sub': '#0077b6', '--color-text-util': '#005f91',
+        '--color-op': '#ffffff', '--color-eq': '#ffffff', '--color-history-title': '#0077b6',
+        '--shadow': 'rgba(0,119,182,0.15)',
+      },
+      forest: {
+        name: '포레스트', icon: '🌿',
+        '--bg-page': '#f1f8f4', '--bg-card': '#ffffff', '--bg-display': '#c8e6c9',
+        '--bg-btn-num': '#c8e6c9', '--bg-btn-num-hover': '#a5d6a7',
+        '--bg-btn-util': '#a5d6a7', '--bg-btn-util-hover': '#81c784',
+        '--bg-btn-op': '#2d6a4f', '--bg-btn-op-hover': '#1b4332', '--bg-btn-op-active': '#ffffff',
+        '--bg-btn-eq': '#2d6a4f', '--bg-btn-eq-hover': '#1b4332',
+        '--bg-history-item': '#c8e6c9', '--bg-history-item-hover': '#a5d6a7', '--bg-history-newest': '#a5d6a7',
+        '--color-text': '#1b3a2d', '--color-text-sub': '#52b788', '--color-text-util': '#2d6a4f',
+        '--color-op': '#ffffff', '--color-eq': '#ffffff', '--color-history-title': '#52b788',
+        '--shadow': 'rgba(45,106,79,0.15)',
+      },
+      sunset: {
+        name: '선셋', icon: '🌅',
+        '--bg-page': '#fff8e7', '--bg-card': '#ffffff', '--bg-display': '#ffecb3',
+        '--bg-btn-num': '#ffecb3', '--bg-btn-num-hover': '#ffe082',
+        '--bg-btn-util': '#ffcc80', '--bg-btn-util-hover': '#ffb74d',
+        '--bg-btn-op': '#e63946', '--bg-btn-op-hover': '#c1121f', '--bg-btn-op-active': '#ffffff',
+        '--bg-btn-eq': '#e63946', '--bg-btn-eq-hover': '#c1121f',
+        '--bg-history-item': '#ffecb3', '--bg-history-item-hover': '#ffe082', '--bg-history-newest': '#ffe082',
+        '--color-text': '#3d1a00', '--color-text-sub': '#e63946', '--color-text-util': '#bf360c',
+        '--color-op': '#ffffff', '--color-eq': '#ffffff', '--color-history-title': '#e63946',
+        '--shadow': 'rgba(230,57,70,0.15)',
+      },
+      midnight: {
+        name: '미드나이트', icon: '💜',
+        '--bg-page': '#0d0221', '--bg-card': '#1a0a40', '--bg-display': '#2d1b69',
+        '--bg-btn-num': '#250f52', '--bg-btn-num-hover': '#3a1e73',
+        '--bg-btn-util': '#3a1e73', '--bg-btn-util-hover': '#4e2f87',
+        '--bg-btn-op': '#9b5de5', '--bg-btn-op-hover': '#7b3fc4', '--bg-btn-op-active': '#ffffff',
+        '--bg-btn-eq': '#9b5de5', '--bg-btn-eq-hover': '#7b3fc4',
+        '--bg-history-item': '#250f52', '--bg-history-item-hover': '#3a1e73', '--bg-history-newest': '#3a1e73',
+        '--color-text': '#e8d5ff', '--color-text-sub': '#b39ddb', '--color-text-util': '#ce93d8',
+        '--color-op': '#ffffff', '--color-eq': '#ffffff', '--color-history-title': '#b39ddb',
+        '--shadow': 'rgba(155,93,229,0.3)',
+      },
+    };
+
+    let currentPreset = 'light';
+    let currentCustomBg = null;
+    let currentCustomAccent = null;
+
+    // CSS 변수를 루트에 직접 적용해 테마 전환
+    function applyTheme(presetId, customBg, customAccent) {
+      currentPreset = PRESETS[presetId] ? presetId : 'light';
+      currentCustomBg = customBg || null;
+      currentCustomAccent = customAccent || null;
+
+      const preset = PRESETS[currentPreset];
+      const root = document.documentElement;
+      Object.entries(preset).forEach(([key, val]) => {
+        if (key.startsWith('--')) root.style.setProperty(key, val);
+      });
+
+      // 커스텀 색상 오버라이드
+      if (currentCustomBg) root.style.setProperty('--bg-page', currentCustomBg);
+      if (currentCustomAccent) {
+        root.style.setProperty('--bg-btn-op', currentCustomAccent);
+        root.style.setProperty('--bg-btn-op-hover', currentCustomAccent);
+        root.style.setProperty('--bg-btn-eq', currentCustomAccent);
+        root.style.setProperty('--bg-btn-eq-hover', currentCustomAccent);
+      }
+
+      // 프리셋 그리드 선택 표시 갱신
+      document.querySelectorAll('.preset-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.id === currentPreset);
+      });
+    }
+
+    // 프리셋 카드 그리드 렌더링
+    function renderPresetGrid() {
+      const grid = document.getElementById('presetGrid');
+      grid.innerHTML = '';
+      Object.entries(PRESETS).forEach(([id, preset]) => {
+        const card = document.createElement('button');
+        card.className = 'preset-card' + (id === currentPreset ? ' active' : '');
+        card.dataset.id = id;
+        card.onclick = () => selectPreset(id);
+        card.innerHTML = `
+          <div class="preset-preview" style="background:linear-gradient(135deg,${preset['--bg-page']} 50%,${preset['--bg-btn-op']} 50%)"></div>
+          <span class="preset-name">${preset.icon}<br>${preset.name}</span>`;
+        grid.appendChild(card);
+      });
+    }
+
+    // 프리셋 선택 (커스텀 색상 초기화)
+    function selectPreset(id) {
+      applyTheme(id, null, null);
+      const preset = PRESETS[id];
+      document.getElementById('colorBg').value = preset['--bg-page'];
+      document.getElementById('colorAccent').value = preset['--bg-btn-op'];
+      if (currentUser) saveTheme(id, null, null);
+    }
+
+    // 커스텀 색상 피커 변경 (bg 또는 accent 둘 중 하나만 null 허용)
+    function applyCustomColors(bg, accent) {
+      if (bg !== null) currentCustomBg = bg;
+      if (accent !== null) currentCustomAccent = accent;
+      const root = document.documentElement;
+      if (currentCustomBg) root.style.setProperty('--bg-page', currentCustomBg);
+      if (currentCustomAccent) {
+        root.style.setProperty('--bg-btn-op', currentCustomAccent);
+        root.style.setProperty('--bg-btn-op-hover', currentCustomAccent);
+        root.style.setProperty('--bg-btn-eq', currentCustomAccent);
+        root.style.setProperty('--bg-btn-eq-hover', currentCustomAccent);
+      }
+      if (currentUser) saveTheme(currentPreset, currentCustomBg, currentCustomAccent);
+    }
+
+    // ===== 글꼴 시스템 =====
+
+    const FONTS = {
+      'default':     { name: '기본 (시스템)',  family: "'Segoe UI', sans-serif",        google: null },
+      'roboto-mono': { name: 'Roboto Mono',   family: "'Roboto Mono', monospace",       google: 'Roboto+Mono' },
+      'nunito':      { name: 'Nunito',         family: "'Nunito', sans-serif",           google: 'Nunito' },
+      'orbitron':    { name: 'Orbitron',       family: "'Orbitron', sans-serif",         google: 'Orbitron' },
+      'noto-sans-kr':{ name: 'Noto Sans KR',  family: "'Noto Sans KR', sans-serif",     google: 'Noto+Sans+KR' },
+    };
+
+    let currentFont = 'default';
+
+    // Google Fonts 동적 로드 (중복 방지)
+    function loadGoogleFont(fontKey) {
+      if (!fontKey) return;
+      const id = 'gf-' + fontKey;
+      if (document.getElementById(id)) return;
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${fontKey}:wght@400;500;700&display=swap`;
+      document.head.appendChild(link);
+    }
+
+    // 전체 페이지에 글꼴 즉시 적용
+    function applyFont(fontId) {
+      const font = FONTS[fontId] || FONTS['default'];
+      currentFont = fontId in FONTS ? fontId : 'default';
+      if (font.google) loadGoogleFont(font.google);
+      document.body.style.fontFamily = font.family;
+      document.querySelectorAll('.font-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.id === currentFont);
+      });
+    }
+
+    // 글꼴 선택 및 사용자별 저장
+    function selectFont(fontId) {
+      applyFont(fontId);
+      if (currentUser) {
+        const themes = getThemes();
+        const td = themes[currentUser.id] || {};
+        td.font = fontId;
+        themes[currentUser.id] = td;
+        saveThemes(themes);
+      }
+    }
+
+    // 글꼴 버튼 그리드 렌더링
+    function renderFontGrid() {
+      const grid = document.getElementById('fontGrid');
+      grid.innerHTML = '';
+      Object.entries(FONTS).forEach(([id, font]) => {
+        const btn = document.createElement('button');
+        btn.className = 'font-btn' + (id === currentFont ? ' active' : '');
+        btn.dataset.id = id;
+        btn.style.fontFamily = font.family;
+        btn.textContent = font.name;
+        btn.onclick = () => selectFont(id);
+        grid.appendChild(btn);
+      });
+    }
+
+    // 설정 패널 열기
+    function openSettings() {
+      renderPresetGrid();
+      renderFontGrid();
+      const preset = PRESETS[currentPreset];
+      document.getElementById('colorBg').value = currentCustomBg || preset['--bg-page'];
+      document.getElementById('colorAccent').value = currentCustomAccent || preset['--bg-btn-op'];
+      document.getElementById('settingsPanel').classList.add('open');
+      document.getElementById('settingsOverlay').classList.add('open');
+    }
+
+    // 설정 패널 닫기
+    function closeSettings() {
+      document.getElementById('settingsPanel').classList.remove('open');
+      document.getElementById('settingsOverlay').classList.remove('open');
+    }
+
+    let current = '0';
+    let previous = '';
+    let operator = null;
+    let shouldReset = false;
+    let calcHistory = [];
+
+    const resultEl = document.getElementById('result');
+    const expressionEl = document.getElementById('expression');
+    const historyListEl = document.getElementById('historyList');
+    const historyEmptyEl = document.getElementById('historyEmpty');
+
+    function addHistory(expr, result) {
+      calcHistory.unshift({ expr, result });
+      if (calcHistory.length > 5) calcHistory.pop();
+      renderHistory();
+      saveHistory(); // 사용자 히스토리 저장
+    }
+
+    function renderHistory() {
+      // 기존 항목 제거 (empty 메시지 제외)
+      historyListEl.querySelectorAll('.history-item').forEach(el => el.remove());
+
+      if (calcHistory.length === 0) {
+        historyEmptyEl.style.display = 'block';
+        return;
+      }
+      historyEmptyEl.style.display = 'none';
+
+      calcHistory.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'history-item' + (i === 0 ? ' newest' : '');
+        const exprDiv = document.createElement('div');
+        exprDiv.className = 'h-expr';
+        exprDiv.textContent = item.expr;
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'h-result';
+        resultDiv.textContent = item.result;
+        div.appendChild(exprDiv);
+        div.appendChild(resultDiv);
+        div.addEventListener('click', () => {
+          current = item.result;
+          shouldReset = false;
+          expressionEl.textContent = '';
+          updateDisplay();
+        });
+        historyListEl.appendChild(div);
+      });
+    }
+
+    function clearHistory() {
+      calcHistory = [];
+      renderHistory();
+      saveHistory(); // 초기화된 히스토리 저장
+    }
+
+    function updateDisplay() {
+      resultEl.textContent = current;
+    }
+
+    function clearActiveOp() {
+      document.querySelectorAll('.btn-op').forEach(b => b.classList.remove('active'));
+    }
+
+    function inputNum(num) {
+      if (shouldReset) {
+        current = num;
+        shouldReset = false;
+      } else {
+        if (current.length >= 12) return; // 최대 12자리 제한
+        current = current === '0' ? num : current + num;
+      }
+      updateDisplay();
+    }
+
+    function inputDot() {
+      if (shouldReset) {
+        current = '0.';
+        shouldReset = false;
+        updateDisplay();
+        return;
+      }
+      if (!current.includes('.')) {
+        current += '.';
+        updateDisplay();
+      }
+    }
+
+    function setOperator(op) {
+      if (operator && !shouldReset) {
+        calculate(true);
+      }
+      previous = current;
+      operator = op;
+      shouldReset = true;
+
+      const opSymbols = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+      expressionEl.textContent = previous + ' ' + opSymbols[op];
+
+      clearActiveOp();
+      document.getElementById('op-' + op).classList.add('active');
+    }
+
+    function calculate(silent = false) {
+      if (!operator || !previous) return;
+
+      const a = parseFloat(previous);
+      const b = parseFloat(current);
+      let res;
+
+      switch (operator) {
+        case '+': res = a + b; break;
+        case '-': res = a - b; break;
+        case '*': res = a * b; break;
+        case '/':
+          if (b === 0) {
+            current = '오류';
+            expressionEl.textContent = '';
+            operator = null;
+            previous = '';
+            shouldReset = true;
+            updateDisplay();
+            clearActiveOp();
+            return;
+          }
+          res = a / b;
+          break;
+      }
+
+      const opSymbols = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+      const exprText = previous + ' ' + opSymbols[operator] + ' ' + current;
+      if (!silent) {
+        expressionEl.textContent = exprText + ' =';
+      }
+
+      // 부동소수점 처리
+      const resStr = parseFloat(res.toPrecision(12)).toString();
+      if (!silent) {
+        addHistory(exprText, resStr);
+      }
+      current = resStr;
+      operator = null;
+      previous = '';
+      shouldReset = true;
+      updateDisplay();
+      clearActiveOp();
+    }
+
+    function clearAll() {
+      current = '0';
+      previous = '';
+      operator = null;
+      shouldReset = false;
+      expressionEl.textContent = '';
+      updateDisplay();
+      clearActiveOp();
+    }
+
+    function toggleSign() {
+      if (current !== '0') {
+        current = (parseFloat(current) * -1).toString();
+        updateDisplay();
+      }
+    }
+
+    function percent() {
+      current = (parseFloat(current) / 100).toString();
+      updateDisplay();
+    }
+
+    // 키보드 지원 (입력 필드 포커스 중에는 계산기 단축키 무시)
+    document.addEventListener('keydown', (e) => {
+      if (document.activeElement.tagName === 'INPUT') return;
+      if (e.key >= '0' && e.key <= '9') inputNum(e.key);
+      else if (e.key === '.') inputDot();
+      else if (e.key === '+') setOperator('+');
+      else if (e.key === '-') setOperator('-');
+      else if (e.key === '*') setOperator('*');
+      else if (e.key === '/') { e.preventDefault(); setOperator('/'); }
+      else if (e.key === 'Enter' || e.key === '=') calculate();
+      else if (e.key === 'Escape') clearAll();
+      else if (e.key === 'Backspace') {
+        if (!shouldReset && current.length > 1) {
+          current = current.slice(0, -1);
+        } else {
+          current = '0';
+        }
+        updateDisplay();
+      }
+    });
+
+    // ===== 버튼 클릭 효과음 =====
+    let audioCtx = null;
+
+    function playClickSound() {
+      // 첫 클릭 시 AudioContext 초기화 (브라우저 자동재생 정책 대응)
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      // 뾱 소리: 높은 주파수에서 빠르게 낮아지는 단발음
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1100, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(350, audioCtx.currentTime + 0.055);
+      gainNode.gain.setValueAtTime(0.18, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    // 계산기 버튼 영역 클릭 시 효과음 재생 (이벤트 위임)
+    document.querySelector('.buttons').addEventListener('mousedown', playClickSound);
+
+    // 앱 시작
+    init();
+  </script>
+</body>
+</html>
